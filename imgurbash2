@@ -152,7 +152,7 @@ api_call() {
 			-m "$API_CALL_TIMEOUT_SEC" \
 			--retry "$API_CALL_RETRIES" \
 			--stderr - \
-			-sSL \
+			-fsSL \
 			"${hdrs[@]}" \
 			"$IMGUR_API/$IMGUR_API_VER/$resource"
 }
@@ -621,6 +621,7 @@ persist_tokens() {
 # @param {string} url     url to uploaded image to be deleted.
 #
 # @returns {void}
+# shellcheck disable=SC2329
 delete_image_auto() {
 	local dhash url response
 
@@ -648,7 +649,7 @@ setup
 
 ############# START CONFIG #############
 LOGIN=false  # true if we should authenticate with our own user.
-ALBUM_ID=""
+ALBUM_ID=''
 
 API_CALL_CONNECT_TIMEOUT_SEC=5
 API_CALL_TIMEOUT_SEC=60
@@ -656,11 +657,9 @@ API_CALL_RETRIES=1
 
 LOG_FILE="$CONF_ROOT/log"
 
-AUTO_DELETE_DELAY=""  # if set, uploaded image(s) will be deleted after this delay
+AUTO_DELETE_DELAY=''  # if set, uploaded image(s) will be deleted after this delay
 
-# if the config file exists and is not empty...
 if [[ -s "$CONF_FILE" ]]; then
-	# load configuations
 	source "$CONF_FILE"
 fi
 
