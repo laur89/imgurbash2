@@ -22,7 +22,7 @@
 #
 #------------------------------------------------------------------------------
 # ABOUT:    imgurbash2 is a simple bash script that allows you to upload images
-#           and videos to imgur.  Once an image/video is uploaded, the link is 
+#           and videos to imgur.  Once an image/video is uploaded, the link is
 #           displayed in your terminal and copied to your clipboard.
 # MANUAL:   https://github.com/ram-on/imgurbash2/blob/master/examples.md
 # AUTHORS:  Ramon <https://github.com/ram-on/imgurbash2>
@@ -35,12 +35,14 @@
 set -a
 
 readonly SELF=${0##*/}
-readonly VERSION="3.3"
-readonly CONF_ROOT="$HOME/.config/imgurbash2"
+readonly VERSION='3.3'
+readonly CONF_ROOT="${XDG_CONFIG_HOME:-$HOME/.config}/imgurbash2"
 readonly CONF_FILE="$CONF_ROOT/config"
 readonly CREDENTIALS_FILE="$CONF_ROOT/credentials.conf"
 readonly ANON_CLIENT_ID=4f0d009df8e7de6  # client_id to use for non-authenticated operations
-readonly TOKEN_URL="https://api.imgur.com/oauth2/token"
+readonly IMGUR_API='https://api.imgur.com'  # https://apidocs.imgur.com/
+readonly IMGUR_API_VER=3
+readonly TOKEN_URL="$IMGUR_API/oauth2/token"
 readonly JOB_ID="$$"
 uname    | grep -q Darwin && readonly IS_MACOS=true || readonly IS_MACOS=false
 uname    | grep -q Linux  && readonly IS_LINUX=true || readonly IS_LINUX=false
@@ -78,8 +80,8 @@ ${COLORS[GREEN]}Where:${COLORS[OFF]}
 
 ${COLORS[GREEN]}Options:${COLORS[OFF]}
     ${COLORS[GREEN]}-d, --delete${COLORS[OFF]} <delete_hash1> [delete_hash2...]
-        Deletes image/videos(s) based on supplied delete hash.  The delete hash 
-        is outputted when the user uploads an image/video.
+        Deletes image/videos(s) based on supplied delete hash.  The delete hash
+        is output when the user uploads an image/video.
     ${COLORS[GREEN]}-D, --auto-delete${COLORS[OFF]} <delay>
         Where <delay> is how long we should wait before deletion in seconds.
         Also accepts [smhdwM] suffix, where 's' for seconds (the default), 'm'
@@ -152,7 +154,7 @@ api_call() {
 			--stderr - \
 			-sSL \
 			"${hdrs[@]}" \
-			"https://api.imgur.com/3/${resource}"
+			"$IMGUR_API/$IMGUR_API_VER/$resource"
 }
 
 
@@ -236,7 +238,7 @@ copy_to_clipboard() {
 
 	if [[ "$IS_MACOS" == true ]]; then
 		echo -n "$input" | pbcopy
-	elif [[ "$IS_WSL" == true ]]; then 
+	elif [[ "$IS_WSL" == true ]]; then
 		echo -n "$input" | clip.exe
 	elif [[ -n "$DISPLAY" ]]; then
 		{ command -v xsel &>/dev/null && echo -n "$input" | xsel --input --clipboard; } \
@@ -356,9 +358,9 @@ is_request_success() {
 err() {
 	local opt no_log msg OPTIND
 
-	while getopts "L" opt; do
+	while getopts 'L' opt; do
 		case "$opt" in
-			L) no_log=1 ;;
+			L) no_log=true ;;
 			*) usage; exit 1 ;;  # do not call fail() to avoid circular dep
 		esac
 	done
@@ -368,10 +370,8 @@ err() {
 
 	>&2 echo -e "${COLORS[RED]}ERROR:${COLORS[OFF]}  ${msg:-"ERR"}" 1>&2
 
-	if [[ $DISABLE_LOGGING != true ]]; then
-		if [[ "$no_log" -ne 1 ]]; then
-			echo "ERROR ["$(date '+%Y-%m-%dT%H:%M:%S')" - $JOB_ID]  $msg" >> "$LOG_FILE"
-		fi
+	if [[ $DISABLE_LOGGING != true && "$no_log" != true ]]; then
+		echo "ERROR [$(date '+%Y-%m-%dT%H:%M:%S') - $JOB_ID]  $msg" >> "$LOG_FILE"
 	fi
 }
 
@@ -393,10 +393,10 @@ fail() {
 info() {
 	local opt no_log no_stdout msg OPTIND
 
-	while getopts "LS" opt; do
+	while getopts 'LS' opt; do
 		case "$opt" in
-			L) no_log=1 ;;
-			S) no_stdout=1 ;;
+			L) no_log=true ;;
+			S) no_stdout=true ;;
 			*) usage; fail ;;
 		esac
 	done
@@ -404,14 +404,12 @@ info() {
 
 	msg="$1"
 
-	if [[ "$no_stdout" -ne 1 ]]; then
+	if [[ "$no_stdout" != true ]]; then
 		>&2 echo -e "${msg:-"--info lvl message placeholder--"}"
 	fi
 
-	if [[ $DISABLE_LOGGING != true ]]; then
-		if [[ "$no_log" -ne 1 ]]; then
-			echo "INFO ["$(date '+%Y-%m-%dT%H:%M:%S')" - $JOB_ID]  $msg" >> "$LOG_FILE"
-		fi
+	if [[ $DISABLE_LOGGING != true && "$no_log" != true ]]; then
+		echo "INFO [$(date '+%Y-%m-%dT%H:%M:%S') - $JOB_ID]  $msg" >> "$LOG_FILE"
 	fi
 }
 
@@ -511,7 +509,7 @@ init_auth() {
 
 	echo "Account authentication is required to upload images/videos to you account and to your
 personal albums.  In order to authenticate you need to visit
-${COLORS[CYAN]}https://api.imgur.com/oauth2/addclient${COLORS[OFF]} and then register this application by:
+${COLORS[CYAN]}${IMGUR_API}/oauth2/addclient${COLORS[OFF]} and then register this application by:
 1. Filling in the 'Application Name' and 'Email' fields; and
 2. Set the authorisation type to 'OAuth 2 authorization without a callback URL'.
 
@@ -538,7 +536,7 @@ Fill in the below fields:
 	fi
 
 	if [[ -z "$REFRESH_TOKEN" ]]; then
-		url="https://api.imgur.com/oauth2/authorize?client_id=${CLIENT_ID}&response_type=token"
+		url="$IMGUR_API/oauth2/authorize?client_id=${CLIENT_ID}&response_type=token"
 		echo "* Open ${COLORS[CYAN]}${url}${COLORS[OFF]}"
 		echo "  in browser and give access to this application by clicking on the 'Allow'"
 		read -r -p '  button.  Then copy the resulting redirect URL in here: ' url
